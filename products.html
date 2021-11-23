@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+
+    <title>Каталог товаров</title>
+  </head>
+  <body>
+    
+	<div class="container">
+		<button class="btn btn-primary float-end mt-2 mb-3 generate_btn">Сгенерировать</button>
+		<table id="products" class="table table-stripped">
+			<tr>
+				<th>ID</th>
+				<th>Наименование</th>
+				<th>Артикл</th>
+				<th>Стоимость</th>
+				<th>Количество</th>
+				<th>Добавлен</th>
+				<th></th>
+			</tr>
+			<tr id="product_template" class="product">
+				<td>{{PRODUCT_ID}}</td>
+				<td>{{PRODUCT_NAME}}</td>
+				<td>{{PRODUCT_ARTICLE}}</td>
+				<td>{{PRODUCT_PRICE}}</td>
+				<td><button class="btn btn-success btn-sm sub_btn">-</button><span class="ps-2 pe-2 border-top border-bottom pb-1 product_quantity">{{PRODUCT_QUANTITY}}</span><button class="btn btn-success btn-sm add_btn">+</button></td>
+				<td>{{DATE_CREATE}}</td>
+				<td><button class="btn btn-primary btn-sm product_hide_btn">Скрыть</button></td>
+			</tr>
+		</table>
+	</div>
+	
+	
+	
+	
+	<script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
+	<script>
+		
+		
+		class ProductsList{
+			display(){
+				var obj = this
+				//сохраненный список товаров загружаем в таблицу
+				this.products.forEach(function(el,i){
+					let new_elem = $(obj.product_template).clone()
+					for(var key in el){
+						new_elem = $(new_elem).prop('outerHTML').replace(new RegExp("{{"+key+"}}"),el[key])
+					}
+					$("#products").append($(new_elem))
+					
+				})
+				//блокирует с нулевым количеством
+				$("#products .product").each(function(i,el){
+					console.log(el)
+					if($(el).find(".product_quantity").text()<=0)
+						$(el).find(".sub_btn").attr("disabled","disabled")
+				})
+			}
+			events(){
+				//события на кнопки таблицы
+				$("#products .sub_btn").click(function(){
+					var pp = $(this).parent().parent()
+					var id = pp.find("td:first-of-type").text()
+					$.get("ajax_handler.php?k=sub&product_id="+id).done(function(data){
+						$(pp).find(".product_quantity").html(data)
+						if(data==0) $(pp).find(".sub_btn").attr("disabled","disabled")
+					})
+				})
+				$("#products .add_btn").click(function(){
+					var pp = $(this).parent().parent()
+					var id = pp.find("td:first-of-type").text()
+					$.get("ajax_handler.php?k=add&product_id="+id).done(function(data){
+						$(pp).find(".product_quantity").html(data)
+						if(data>0 && $(pp).find(".sub_btn").attr("disabled")== "disabled") $(pp).find(".sub_btn").removeAttr("disabled")
+					})
+				})
+				$("#products .product_hide_btn").click(function(){
+					var pp = $(this).parent().parent()
+					var id = pp.find("td:first-of-type").text()
+					$.get("ajax_handler.php?k=hide&product_id="+id).done(function(data){
+						pp.remove()
+					})
+				})
+			}
+			change(products){
+				$("#products .product").remove()
+				this.products = products
+				this.display()
+				this.events()
+			}
+			constructor(){
+				this.product_template = $("#product_template").eq(0).clone()
+				$("#product_template").remove();
+			}
+			load(){
+				var obj = this
+				$.get("ajax_handler.php?k=all").done(function(data){
+					obj.change(data)
+				})
+			}
+			
+			//генерация случайных товаров
+			generate(){
+				var obj = this
+				$.get("ajax_handler.php?k=generate").done(function(data){
+					obj.change(data)
+				})
+			}
+		}
+		var plc = new ProductsList()
+		plc.load()
+		
+		$(".generate_btn").click(function(){
+			plc.generate()
+		})
+	</script>
+  </body>
+</html>
